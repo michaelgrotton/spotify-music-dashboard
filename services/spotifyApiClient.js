@@ -11,7 +11,7 @@ const Longterm = mongoose.model("longterms");
 var spotifyApi = new SpotifyWebApi({
   clientId: keys.spotifyClientID,
   clientSecret: keys.spotifyClientSecret,
-  redirectUri: "http://localhost:5000/auth/spotify/callback"
+  redirectUri: "/auth/spotify/callback"
 });
 
 //populate database
