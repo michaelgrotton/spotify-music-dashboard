@@ -3,6 +3,8 @@ import { connect } from "react-redux";
 import * as actions from "../actions";
 import Tracks from "./Tracks";
 import Artists from "./Artists";
+import RadarChart from "./RadarChart";
+
 import {
   Container,
   Row,
@@ -14,8 +16,17 @@ import {
 class Landing extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { time_range: "medium_term" };
+    this.state = {
+      time_range: "medium_term",
+      screenWidth: 0,
+      screenHeight: 0,
+      track: 0
+    };
   }
+
+  clickTrack = i => {
+    this.setState({ track: i });
+  };
 
   handleChange = time_range => {
     this.setState({ time_range });
@@ -26,7 +37,24 @@ class Landing extends React.Component {
   componentDidMount() {
     this.props.fetchTracks(this.state.time_range);
     this.props.fetchArtists(this.state.time_range);
+    window.addEventListener("resize", this.onResize, false);
+    this.onResize();
   }
+
+  onResize = () => {
+    let screenWidth = window.innerWidth;
+    let screenHeight = window.innerHeight;
+
+    if (screenWidth > 768) {
+      screenWidth = screenWidth * 0.33;
+      screenHeight = screenWidth;
+    } else {
+      screenWidth = screenWidth * 0.9;
+      screenHeight = screenWidth;
+    }
+
+    this.setState({ screenWidth, screenHeight });
+  };
 
   render() {
     return (
@@ -73,10 +101,28 @@ class Landing extends React.Component {
             </Alert>
           )}
           <Row>
-            <Tracks timeRange={this.state.time_range} />
+            <Tracks
+              timeRange={this.state.time_range}
+              clickTrack={this.clickTrack}
+            />
             <Artists timeRange={this.state.time_range} />
           </Row>
         </Container>
+        <div
+          style={{
+            height: this.state.screenHeight,
+            width: this.state.screenWidth,
+            margin: "0 auto"
+          }}
+        >
+          {this.props.tracks != null && (
+            <RadarChart
+              width={this.state.screenWidth}
+              height={this.state.screenHeight}
+              track={this.state.track}
+            />
+          )}
+        </div>
       </div>
     );
   }

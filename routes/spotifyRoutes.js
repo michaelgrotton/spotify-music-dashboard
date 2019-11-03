@@ -6,6 +6,7 @@ const mongoose = require("mongoose");
 const Shortterm = mongoose.model("shortterms");
 const Mediumterm = mongoose.model("mediumterms");
 const Longterm = mongoose.model("longterms");
+const Track = mongoose.model("tracks");
 
 module.exports = app => {
   app.get("/api/artists", requireLogin, async (req, res) => {
@@ -63,13 +64,45 @@ module.exports = app => {
       }
     }
 
-    const tracks = relation.tracks.map((track, i) => {
-      return {
-        name: track.name,
-        artists: track.artists.join(", "),
-        analysis: track.analysis
-      };
-    });
+    var tracks = [];
+
+    for (var i = 0; i < relation.tracks.length; i++) {
+      const trackDB = await Track.findOne({
+        uri: relation.tracks[i].uri
+      });
+
+      tracks.push({
+        name: trackDB.name,
+        artists: trackDB.artists.join(", "),
+        analysis: trackDB.analysis.map(function({
+          danceability,
+          energy,
+          key,
+          loudness,
+          mode,
+          speechiness,
+          acousticness,
+          instrumentalness,
+          liveness,
+          valence,
+          tempo
+        }) {
+          return {
+            danceability,
+            energy,
+            key,
+            loudness,
+            mode,
+            speechiness,
+            acousticness,
+            instrumentalness,
+            liveness,
+            valence,
+            tempo
+          };
+        })
+      });
+    }
 
     res.send(tracks);
   });
