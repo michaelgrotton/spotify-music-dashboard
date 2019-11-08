@@ -4,14 +4,26 @@ import * as actions from "../actions";
 import Tracks from "./Tracks";
 import Artists from "./Artists";
 import RadarChart from "./RadarChart";
-
+import * as d3 from "d3";
 import {
   Container,
   Row,
+  Col,
   DropdownButton,
   Dropdown,
-  Alert
+  Alert,
+  ListGroup
 } from "react-bootstrap";
+
+const audio_features = [
+  "danceability",
+  "valence",
+  "liveness",
+  "speechiness",
+  "energy",
+  "instrumentalness",
+  "acousticness"
+];
 
 class Landing extends React.Component {
   constructor(props) {
@@ -20,18 +32,62 @@ class Landing extends React.Component {
       time_range: "medium_term",
       screenWidth: 0,
       screenHeight: 0,
-      track: 0
+      tracks: { first: null, second: null },
+      data: []
     };
   }
 
   clickTrack = i => {
-    this.setState({ track: i });
+    var first = this.state.tracks.first;
+    var second = this.state.tracks.second;
+
+    if (this.state.tracks.first === i && this.state.tracks.second != null) {
+      first = second;
+      second = null;
+    } else if (this.state.tracks.first === i) {
+      first = null;
+    } else if (this.state.tracks.second === i) {
+      second = null;
+    } else if (this.state.tracks.first != null) {
+      second = i;
+    } else if (this.state.tracks.first === null) {
+      first = i;
+    }
+
+    this.setState({ tracks: { first, second } });
+    this.getData(first, second);
   };
 
   handleChange = time_range => {
-    this.setState({ time_range });
+    this.setState({ time_range, tracks: { first: null, second: null } });
+    this.getData(null, null);
     this.props.fetchTracks(time_range);
     this.props.fetchArtists(time_range);
+  };
+
+  getData = (first, second) => {
+    var allData = [];
+    var data = [];
+
+    this.props.tracks.map(track => {
+      track.analysis.map(features => {
+        var analysis = Object.keys(features).map(function(feature) {
+          if (audio_features.includes(feature)) {
+            var obj = {};
+            obj["value"] = features[feature];
+            obj["axis"] = feature;
+            return obj;
+          }
+        });
+        allData.push(analysis.filter(feature => feature != undefined));
+      });
+    });
+
+    if (first != null) data.push(allData[first]);
+    if (second != null) data.push(allData[second]);
+    if (first == null && second == null) data = [];
+
+    this.setState({ data });
   };
 
   componentDidMount() {
@@ -49,7 +105,7 @@ class Landing extends React.Component {
       screenWidth = screenWidth * 0.33;
       screenHeight = screenWidth;
     } else {
-      screenWidth = screenWidth * 0.9;
+      screenWidth = screenWidth * 0.8;
       screenHeight = screenWidth;
     }
 
@@ -57,6 +113,8 @@ class Landing extends React.Component {
   };
 
   render() {
+    var color = d3.scaleOrdinal(d3.schemeCategory10);
+
     return (
       <div>
         <Container>
@@ -110,19 +168,130 @@ class Landing extends React.Component {
         </Container>
         <div
           style={{
-            height: this.state.screenHeight,
-            width: this.state.screenWidth,
-            margin: "0 auto"
+            maxWidth: "600px",
+            margin: "60px auto"
           }}
         >
-          {this.props.tracks != null && (
-            <RadarChart
-              width={this.state.screenWidth}
-              height={this.state.screenHeight}
-              track={this.state.track}
-            />
-          )}
+          <p>
+            We can also view audio features on your favorite tracks. Select a
+            track from the list on the right to visualize it using the radar
+            chart on the left. Select another track to compare it to the first
+            track you selected. You can read more about the audio features
+            spotify provides{" "}
+            <a href="https://developer.spotify.com/documentation/web-api/reference/tracks/get-audio-features/">
+              here
+            </a>
+            .
+          </p>
         </div>
+        <Container
+          style={{
+            border: "2px solid whitesmoke",
+            borderRadius: "5px",
+            paddingTop: "10px"
+          }}
+        >
+          <Row>
+            <Col md={5}>
+              {this.props.tracks != null && (
+                <RadarChart
+                  width={this.state.screenWidth}
+                  height={this.state.screenHeight}
+                  tracks={this.state.tracks}
+                  data={this.state.data}
+                />
+              )}
+            </Col>
+            <Col>
+              <h5
+                style={{
+                  lineHeight: "35px",
+                  marginLeft: "20px"
+                }}
+              >
+                Now showing:{" "}
+                {this.state.tracks.first != null && (
+                  <span
+                    style={{
+                      color: "white",
+                      backgroundColor: color(0),
+                      paddingLeft: "3px",
+                      paddingRight: "3px",
+                      borderRadius: "3px",
+                      opacity: ".6"
+                    }}
+                  >
+                    {this.props.tracks[this.state.tracks.first].name}
+                  </span>
+                )}
+                {this.state.tracks.second != null && " and "}
+                {this.state.tracks.second != null && (
+                  <span
+                    style={{
+                      color: "white",
+                      backgroundColor: color(1),
+                      paddingLeft: "3px",
+                      paddingRight: "3px",
+                      borderRadius: "3px",
+                      opacity: ".6"
+                    }}
+                  >
+                    {this.props.tracks[this.state.tracks.second].name}
+                  </span>
+                )}
+              </h5>
+              <Container>
+                <Row>
+                  <Col>
+                    <ListGroup variant="flush">
+                      {this.props.tracks &&
+                        this.props.tracks.map((track, i) => {
+                          if (i < 10)
+                            return (
+                              <ListGroup.Item
+                                action
+                                key={i}
+                                onClick={() => this.clickTrack(i)}
+                                style={{
+                                  margin: 0,
+                                  padding: "5px",
+                                  fontSize: "14px"
+                                }}
+                              >
+                                {track.name}
+                              </ListGroup.Item>
+                            );
+                        })}
+                    </ListGroup>
+                  </Col>
+                  <Col>
+                    <ListGroup variant="flush">
+                      {this.props.tracks &&
+                        this.props.tracks.map((track, i) => {
+                          if (i > 9)
+                            return (
+                              <ListGroup.Item
+                                action
+                                key={i}
+                                onClick={() => this.clickTrack(i)}
+                                style={{
+                                  margin: 0,
+                                  padding: "5px",
+                                  fontSize: "14px"
+                                }}
+                              >
+                                {track.name}
+                              </ListGroup.Item>
+                            );
+                        })}
+                    </ListGroup>
+                  </Col>
+                </Row>
+              </Container>
+            </Col>
+          </Row>
+        </Container>
+        <div style={{ height: "100px", width: "100%" }}></div>
       </div>
     );
   }

@@ -8,7 +8,7 @@ class Tracks extends React.Component {
     if (this.props.tracks != null) {
       tracks = this.props.tracks.map((track, i) => {
         return (
-          <tr key={i} onClick={() => this.props.clickTrack(i)}>
+          <tr>
             <td>{i + 1}</td>
             <td>{track.name}</td>
             <td>{track.artists}</td>
@@ -30,7 +30,7 @@ class Tracks extends React.Component {
     }
 
     return (
-      <Table striped hover bordered size="sm">
+      <Table striped bordered size="sm">
         <thead>
           <tr>
             <th>Rank</th>
